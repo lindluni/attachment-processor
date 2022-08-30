@@ -18,7 +18,7 @@ jobs:
         run: go build -o jira-attachment-migrator.exe
       - name: Build binaries
         if: ${{ matrix.os }} != "windows"
-        run: go build -o jira-attachment-migrator.exe
+        run: go build -o jira-attachment-migrator
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
