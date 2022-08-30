@@ -87,8 +87,17 @@ func main() {
 			}
 		})
 
-	commando.Parse(nil)
+	commando.
+		Register("archive").
+		SetDescription("Generates an archive of the exported attachments").
+		SetAction(func(args map[string]commando.ArgValue, flags map[string]commando.FlagValue) {
+			err := archive()
+			if err != nil {
+				fmt.Printf("Failed archiving attachments: %s\n", err)
+			}
+		})
 
+	commando.Parse(nil)
 }
 
 func newJIRAClient(username, secret, url string) (*jira.Client, error) {
@@ -110,7 +119,7 @@ func newGitHubClient(token string) *github.Client {
 	return github.NewClient(tc)
 }
 
-func expandTarball(path string) error {
+func expand(path string) error {
 	r, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("error opening tarball %s: %s", path, err)
@@ -156,6 +165,47 @@ func expandTarball(path string) error {
 		}
 	}
 
+}
+
+func compress(src string, writers ...io.Writer) error {
+	if _, err := os.Stat(src); err != nil {
+		return fmt.Errorf("unable to tar files: %v", err.Error())
+	}
+
+	mw := io.MultiWriter(writers...)
+
+	gzw := gzip.NewWriter(mw)
+	defer gzw.Close()
+
+	tw := tar.NewWriter(gzw)
+	defer tw.Close()
+
+	return filepath.Walk(src, func(file string, fi os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !fi.Mode().IsRegular() {
+			return nil
+		}
+		header, err := tar.FileInfoHeader(fi, fi.Name())
+		if err != nil {
+			return err
+		}
+		header.Name = strings.TrimPrefix(strings.Replace(file, src, "", -1), string(filepath.Separator))
+		if err := tw.WriteHeader(header); err != nil {
+			return err
+		}
+		f, err := os.Open(file)
+		if err != nil {
+			return err
+		}
+		if _, err := io.Copy(tw, f); err != nil {
+			return err
+		}
+		f.Close()
+
+		return nil
+	})
 }
 
 func processAttachments(db *database) error {
@@ -335,7 +385,7 @@ func collect(flags map[string]commando.FlagValue) error {
 	if !skipArchive {
 		if empty {
 			fmt.Println("Expanding archive")
-			err := expandTarball(archive)
+			err := expand(archive)
 			if err != nil {
 				return fmt.Errorf("failed expanding tarball: %s", err)
 			}
@@ -430,7 +480,7 @@ func upload(flags map[string]commando.FlagValue) error {
 					}
 					file.Close()
 
-					db.Tickets[ticket.Key].Uploaded = true
+					db.Tickets[title].Uploaded = true
 
 					bytes, err := json.Marshal(db)
 					if err != nil {
@@ -444,6 +494,104 @@ func upload(flags map[string]commando.FlagValue) error {
 			}
 		}
 	}
+	fmt.Println("All attachments uploaded")
+
+	return nil
+}
+
+func copy(src, dst string) error {
+	sourceFileStat, err := os.Stat(src)
+	if err != nil {
+		return fmt.Errorf("failed getting file stats: %s", err)
+	}
+
+	if !sourceFileStat.Mode().IsRegular() {
+		return fmt.Errorf("%s is not a regular file", src)
+	}
+
+	source, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("failed opening source file: %s", err)
+	}
+	defer source.Close()
+
+	destination, err := os.Create(dst)
+	if err != nil {
+		return fmt.Errorf("failed creating destination file: %s", err)
+	}
+	defer destination.Close()
+	_, err = io.Copy(destination, source)
+	if err != nil {
+		return fmt.Errorf("failed copying file: %s", err)
+	}
+
+	return nil
+}
+
+func archive() error {
+	if _, err := os.Stat("archive"); os.IsNotExist(err) {
+		fmt.Println("Creating archive directory")
+		err := os.Mkdir("archive", 0755)
+		if err != nil {
+			return fmt.Errorf("failed creating archive directory: %s", err)
+		}
+	} else {
+		fmt.Println("Archive directory already exists, deleting contents")
+		err := os.RemoveAll("archive")
+		if err != nil {
+			return fmt.Errorf("failed deleting archive directory: %s", err)
+		}
+		fmt.Println("Creating new archive directory")
+		err = os.Mkdir("archive", 0755)
+		if err != nil {
+			return fmt.Errorf("failed creating archive directory: %s", err)
+		}
+	}
+
+	bytes, err := os.ReadFile("database.json")
+	if err != nil {
+		return fmt.Errorf("failed reading database: %s", err)
+	}
+
+	db := &database{}
+	err = json.Unmarshal(bytes, db)
+	if err != nil {
+		return fmt.Errorf("failed unmarshalling database: %s", err)
+	}
+
+	fmt.Println("Copying files to archive directory")
+	for _, attachment := range db.Attachments {
+		nameTokens := strings.Split(attachment.Path, "/")
+		name := nameTokens[len(nameTokens)-1]
+		if attachment.Type == "issue" {
+			srcPath := filepath.Join("stage", attachment.Path)
+			dstPath := filepath.Join("archive", fmt.Sprintf("%d_%s", attachment.IssueNumber, name))
+			err := copy(srcPath, dstPath)
+			if err != nil {
+				return fmt.Errorf("failed copying issue attachment: %s", err)
+			}
+		} else {
+			srcPath := filepath.Join("stage", attachment.Path)
+			dstPath := filepath.Join("archive", fmt.Sprintf("%d_%d_%s", attachment.IssueNumber, attachment.CommentNumber, name))
+			err := copy(srcPath, dstPath)
+			if err != nil {
+				return fmt.Errorf("failed copying issue comment attachment: %s", err)
+			}
+		}
+	}
+
+	file, err := os.Create("processed_archive.tgz")
+	if err != nil {
+		return fmt.Errorf("failed opening archive: %s", err)
+	}
+	defer file.Close()
+
+	fmt.Println("Compressing archive")
+	err = compress("archive", file)
+	if err != nil {
+		return fmt.Errorf("failed compressing archive: %s", err)
+	}
+	fmt.Println("Archive compressed: processed_archive.tgz")
 
 	return nil
 }

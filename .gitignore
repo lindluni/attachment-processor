@@ -1,2 +1,7 @@
 *.tgz
+
+archive
 stage
+
+database.json
+jira-attachment-processor
