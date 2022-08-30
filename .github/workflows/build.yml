@@ -1,10 +1,10 @@
 name: Build Binaries
 on: workflow_dispatch
 jobs:
-  build:
+  build-unix:
     strategy:
       matrix:
-        os: [ ubuntu, windows, macos ]
+        os: [ ubuntu, macos ]
     runs-on: ${{ matrix.os }}-latest
     steps:
       - name: Install Go
@@ -14,11 +14,26 @@ jobs:
       - name: Clone repository
         uses: actions/checkout@v3
       - name: Build binaries
-        if: contains(${{ matrix.os }}, "ubuntu") || contains(${{ matrix.os }}, "macos")
-        run: go build -o jira-attachment-migrator.exe
-      - name: Build binaries
-        if: contains(${{ matrix.os }}, "windows")
         run: go build -o jira-attachment-migrator
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: jira-attachment-migrator-${{ matrix.os }}
+          path: ./jira-attachment-migrator*
+  build-windows:
+    strategy:
+      matrix:
+        os: [ windows ]
+    runs-on: ${{ matrix.os }}-latest
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: "1.19"
+      - name: Clone repository
+        uses: actions/checkout@v3
+      - name: Build binaries
+        run: go build -o jira-attachment-migrator.exe
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
