@@ -4,7 +4,7 @@ Download and install the [Jira Attachment Migrator](https://github.com/lindluni/
 
 ## Build the Database
 
-`jira-attachment-migrator collect --archive <path-to-archive> --github-token <github-token> --org <github-org> --repo <github-repo> --jira-username <jira-username> --jira-secret <jira-password-or-token> --jira-key <jira-project-key> --jira-url <jira-url>`
+`jira-attachment-migrator collect --archive <path-to-archive> --github-token <github-token> --org <github-org> --repo <github-repo> --jira-username <jira-username> --jira-secret <jira-password-or-token> --jira-keys <jira-project-key-1,jira-project-key-2> --jira-url <jira-url>`
 
 ## Migrate the Attachments
 
