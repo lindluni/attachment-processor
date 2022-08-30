@@ -14,10 +14,10 @@ jobs:
       - name: Clone repository
         uses: actions/checkout@v3
       - name: Build binaries
-        if: ${{ matrix.os }} == "windows"
+        if: contains(${{ matrix.os }}, "ubuntu") || contains(${{ matrix.os }}, "macos")
         run: go build -o jira-attachment-migrator.exe
       - name: Build binaries
-        if: ${{ matrix.os }} != "windows"
+        if: contains(${{ matrix.os }}, "windows")
         run: go build -o jira-attachment-migrator
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
