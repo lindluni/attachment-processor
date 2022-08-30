@@ -66,7 +66,7 @@ func main() {
 		AddFlag("jira-url", "JIRA URL", commando.String, "").
 		AddFlag("jira-username", "JIRA username", commando.String, "").
 		AddFlag("jira-secret", "JIRA personal access token or password", commando.String, "").
-		AddFlag("jira-key", "JIRA project key", commando.String, "").
+		AddFlag("jira-keys", "JIRA project key", commando.String, "").
 		SetAction(func(args map[string]commando.ArgValue, flags map[string]commando.FlagValue) {
 			err := collect(flags)
 			if err != nil {
@@ -361,7 +361,7 @@ func collect(flags map[string]commando.FlagValue) error {
 	jiraURL := flags["jira-url"].Value.(string)
 	jiraUsername := flags["jira-username"].Value.(string)
 	jiraSecret := flags["jira-secret"].Value.(string)
-	jiraKey := flags["jira-key"].Value.(string)
+	jiraKeys := flags["jira-keys"].Value.(string)
 
 	jira, err := newJIRAClient(jiraUsername, jiraSecret, jiraURL)
 	if err != nil {
@@ -410,16 +410,19 @@ func collect(flags map[string]commando.FlagValue) error {
 		return fmt.Errorf("failed processing attachments: %s", err)
 	}
 
+	fmt.Println("Processing JIRA tickets")
+	scrubbedKeys := strings.ReplaceAll(jiraKeys, " ", "")
+	keyTokens := strings.Split(scrubbedKeys, ",")
+	searchKey := strings.Join(keyTokens, " OR project=")
+	err = processTickets(jira, searchKey, db)
+	if err != nil {
+		return fmt.Errorf("failed processing tickets: %s", err)
+	}
+
 	fmt.Println("Processing GitHub issues")
 	err = processIssues(gh, org, repo, db)
 	if err != nil {
 		return fmt.Errorf("failed processing issues: %s", err)
-	}
-
-	fmt.Println("Processing JIRA tickets")
-	err = processTickets(jira, jiraKey, db)
-	if err != nil {
-		return fmt.Errorf("failed processing tickets: %s", err)
 	}
 
 	fmt.Println("Writing database to disk")

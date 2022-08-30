@@ -14,7 +14,11 @@ jobs:
       - name: Clone repository
         uses: actions/checkout@v3
       - name: Build binaries
-        run: go build -o jira-attachment-migrator
+        if: ${{ matrix.os }} == "windows"
+        run: go build -o jira-attachment-migrator.exe
+      - name: Build binaries
+        if: ${{ matrix.os }} != "windows"
+        run: go build -o jira-attachment-migrator.exe
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
