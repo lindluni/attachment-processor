@@ -47,7 +47,7 @@ type ticket struct {
 
 func main() {
 	commando.
-		SetExecutableName("jira-attachment-processor").
+		SetExecutableName("jira-attachment-migrator").
 		SetVersion("v1.0.0").
 		SetDescription("Utility for migrating GitHub issue attachments to JIRA attachments").
 		Register(nil).
