@@ -100,10 +100,9 @@ func main() {
 	commando.Parse(nil)
 }
 
-func newJIRAClient(username, secret, url string) (*jira.Client, error) {
-	tp := jira.BasicAuthTransport{
-		Username: username,
-		Password: secret,
+func newJIRAClient(secret, url string) (*jira.Client, error) {
+	tp := jira.BearerAuthTransport{
+		Token: secret,
 	}
 
 	return jira.NewClient(tp.Client(), url)
@@ -359,11 +358,11 @@ func collect(flags map[string]commando.FlagValue) error {
 	org := flags["org"].Value.(string)
 	repo := flags["repo"].Value.(string)
 	jiraURL := flags["jira-url"].Value.(string)
-	jiraUsername := flags["jira-username"].Value.(string)
+	_ = flags["jira-username"].Value.(string)
 	jiraSecret := flags["jira-secret"].Value.(string)
 	jiraKeys := flags["jira-keys"].Value.(string)
 
-	jira, err := newJIRAClient(jiraUsername, jiraSecret, jiraURL)
+	jira, err := newJIRAClient(jiraSecret, jiraURL)
 	if err != nil {
 		fmt.Printf("Error creating JIRA client: %s", err)
 	}
@@ -437,10 +436,10 @@ func collect(flags map[string]commando.FlagValue) error {
 
 func upload(flags map[string]commando.FlagValue) error {
 	jiraURL := flags["jira-url"].Value.(string)
-	jiraUsername := flags["jira-username"].Value.(string)
+	_ = flags["jira-username"].Value.(string)
 	jiraSecret := flags["jira-secret"].Value.(string)
 
-	jira, err := newJIRAClient(jiraUsername, jiraSecret, jiraURL)
+	jira, err := newJIRAClient(jiraSecret, jiraURL)
 	if err != nil {
 		log.Panicf("Error creating JIRA client: %s", err)
 	}
