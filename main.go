@@ -332,7 +332,12 @@ func processTickets(client *jira.Client, key string, db *database) error {
 	for {
 		issues, resp, err := client.Issue.Search(fmt.Sprintf("project=%s", key), opts)
 		if err != nil {
-			return fmt.Errorf("failed searching for tickets in %s: %s", key, err)
+			// Read body
+			body, readErr := io.ReadAll(resp.Body)
+			if readErr != nil {
+				return fmt.Errorf("failed reading body: %s\nfailed searching for tickets in %s: %s", readErr, key, err)
+			}
+			return fmt.Errorf("failed searching for tickets in %s: %s\n\n%s", key, err, string(body))
 		}
 		fmt.Printf("Processing JIRA tickets %d of %d\n", opts.StartAt, resp.Total)
 		for _, _issue := range issues {
