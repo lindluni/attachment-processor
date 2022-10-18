@@ -337,6 +337,7 @@ func processTickets(client *jira.Client, key string, db *database) error {
 			if readErr != nil {
 				return fmt.Errorf("failed reading body: %s\nfailed searching for tickets in %s: %s", readErr, key, err)
 			}
+			resp.Body.Close()
 			return fmt.Errorf("failed searching for tickets in %s: %s\n\n%s", key, err, string(body))
 		}
 		fmt.Printf("Processing JIRA tickets %d of %d\n", opts.StartAt, resp.Total)
@@ -479,7 +480,12 @@ func upload(flags map[string]commando.FlagValue) error {
 					_, resp, err := jira.Issue.PostAttachment(ticket.Key, file, name)
 					if err != nil {
 						file.Close()
-						return fmt.Errorf("failed uploading attachment: %s", err)
+						body, readErr := io.ReadAll(resp.Body)
+						if readErr != nil {
+							return fmt.Errorf("failed reading error body: %s\nfailed uploading attachment: %s", readErr, err)
+						}
+						resp.Body.Close()
+						return fmt.Errorf("failed uploading attachment: %s\n\n%s", err, string(body))
 					}
 					if resp.StatusCode != 200 {
 						file.Close()
