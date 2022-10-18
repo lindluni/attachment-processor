@@ -28,7 +28,7 @@ jobs:
         run: |
           set -euo pipefail
           zip jira-attachment-migrator-${{ matrix.os }}.zip jira-attachment-migrator
-          gh release upload ${{ github.ref }} jira-attachment-migrator-${{ matrix.os }}.zip
+          gh release upload $(echo ${{ github.ref }} | cut -d '/' -f3) jira-attachment-migrator-${{ matrix.os }}.zip
   build-windows:
     strategy:
       matrix:
@@ -54,4 +54,4 @@ jobs:
         run: |
           set -euo pipefail
           zip jira-attachment-migrator-windows.zip jira-attachment-migrator.exe
-          gh release upload ${{ github.ref }} jira-attachment-migrator-windows.zip
+          gh release upload $(echo ${{ github.ref }} | cut -d '/' -f3) jira-attachment-migrator-windows.zip
