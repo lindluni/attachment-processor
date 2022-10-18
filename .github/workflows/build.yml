@@ -52,6 +52,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
           zip jira-attachment-migrator-windows.zip jira-attachment-migrator.exe
           gh release upload $(echo ${{ github.ref }} | cut -d '/' -f3) jira-attachment-migrator-windows.zip
