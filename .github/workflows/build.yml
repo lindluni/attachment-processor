@@ -52,5 +52,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          zip jira-attachment-migrator-windows.zip jira-attachment-migrator.exe
+          $compress = @{
+            Path = "jira-attachment-migrator.exe"
+            CompressionLevel = "Fastest"
+            DestinationPath = "jira-attachment-migrator-windows.zip"
+          }
+          Compress-Archive @compress
           gh release upload $(echo ${{ github.ref }} | cut -d '/' -f3) jira-attachment-migrator-windows.zip
